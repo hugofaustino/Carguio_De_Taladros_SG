@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard OPitBlast</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="logo">Enaex</div>
+  <div class="titulo">Dashboard OPitBlast</div>
+  <div class="logo-summa">SUMMA GOLD</div>
+</header>
+
+<section class="panel lista">
+  <h2>Lista de voladuras autorizadas</h2>
+  <p>Formato: Mes | Nombre de voladura | Blast ID</p>
+  <textarea id="txtVoladuras" rows="4"></textarea>
+  <button id="btnGuardarLista">Guardar lista</button>
+</section>
+
+<section class="controles">
+  <div>
+    <label>Mes / Proyecto</label>
+    <select id="selectMes"></select>
+  </div>
+
+  <div>
+    <label>Voladura</label>
+    <select id="selectBlast"></select>
+  </div>
+
+  <button id="btnCargar">Cargar datos</button>
+</section>
+
+<p id="estado">Esperando...</p>
+
+<section class="kpis">
+  <div class="card"><span>Total taladros</span><strong id="kpiTotal">0</strong></div>
+  <div class="card"><span>Taladros cargados</span><strong id="kpiCargados">0</strong></div>
+  <div class="card"><span>Por cargar</span><strong id="kpiPendientes">0</strong></div>
+  <div class="card"><span>Taladros auxiliares</span><strong id="kpiAyudas">0</strong></div>
+  <div class="card"><span>Carga total cargada</span><strong id="kpiCargaTotal">0 kg</strong></div>
+</section>
+
+<main class="dashboard">
+  <section class="grafico-card">
+    <h3 id="tituloGrafico">Estado de carguío</h3>
+    <div id="grafico2D"></div>
+  </section>
+
+  <aside class="botones">
+    <button class="btnVista activo" data-vista="estado">Estado de carguío</button>
+    <button class="btnVista" data-vista="primas">Primas</button>
+    <button class="btnVista" data-vista="bulk">Tipo de mezcla</button>
+  </aside>
+
+  <aside class="resumenes">
+    <div class="tabla-resumen">
+      <h3>Resumen de mezcla</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre Enaex</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyResumenBulk"></tbody>
+      </table>
+    </div>
+
+    <div class="tabla-resumen resumen-label">
+      <h3>Resumen por label</h3>
+      <div class="scroll-tabla">
+        <table>
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Carga</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyResumenLabel"></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<section class="tabla-detalle">
+  <h2>Detalle de taladros</h2>
+  <table>
+    <thead>
+      <tr id="encabezadoTabla"></tr>
+    </thead>
+    <tbody id="cuerpoTabla"></tbody>
+  </table>
+</section>
+
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
