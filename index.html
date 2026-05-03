@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard OPitBlast</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -19,6 +20,19 @@
   <p>Formato: Mes | Nombre de voladura | Blast ID</p>
   <textarea id="txtVoladuras" rows="4"></textarea>
   <button id="btnGuardarLista">Guardar lista</button>
+</section>
+
+<section class="panel panel-supabase">
+  <div class="supabase-header">
+    <div>
+      <h2>Historial centralizado</h2>
+      <p>El historial de carguío se guardará en Supabase para que todos vean la misma fecha detectada.</p>
+    </div>
+    <div id="estadoSupabase" class="estado-supabase">Verificando conexión...</div>
+  </div>
+  <div class="nota-supabase">
+    Si aún no colocaste tus credenciales de Supabase en <strong>script.js</strong>, el dashboard usará respaldo local temporal.
+  </div>
 </section>
 
 <section class="controles">
@@ -162,7 +176,39 @@
   </table>
 </section>
 
+<section class="panel historial-admin">
+  <div class="historial-header">
+    <div>
+      <h2>Edición de historial guardado</h2>
+      <p>Permite corregir manualmente la fecha detectada en Supabase para la voladura seleccionada.</p>
+    </div>
+    <button id="btnRecargarHistorial" type="button" class="btnSecundario">Recargar historial</button>
+  </div>
+
+  <div id="estadoHistorialAdmin" class="estado-historial-admin">
+    Carga una voladura para ver el historial editable.
+  </div>
+
+  <div class="tabla-historial-admin">
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Taladro</th>
+          <th>Último Ch</th>
+          <th>Fecha detectada</th>
+          <th>Método</th>
+          <th>Comentario</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyHistorialAdmin"></tbody>
+    </table>
+  </div>
+</section>
+
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
 
 </body>
