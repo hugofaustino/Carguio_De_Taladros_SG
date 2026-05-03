@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carguío de Taladros · OPitBlast</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="topbar topbar-ejecutivo">
+  <div class="brand-left">
+    <div class="logo">Enaex</div>
+    <div class="brand-pill">EMTS</div>
+  </div>
+  <div class="titulo-bloque">
+    <div class="titulo">Carguío de Taladros</div>
+    <div class="subtitulo">OPitBlast Analytics · Seguimiento operativo y consumo de insumos</div>
+  </div>
+  <div class="logo-summa">SUMMA GOLD</div>
+</header>
+
+<section class="panel lista lista-colapsable lista-cerrada">
+  <div class="lista-header">
+    <div>
+      <h2>Voladuras autorizadas</h2>
+      <p>Lista compartida en Supabase para todos los usuarios.</p>
+    </div>
+    <div class="lista-acciones">
+      <button id="btnToggleLista" type="button" class="btnSecundario">Mostrar / editar lista</button>
+      <button id="btnGuardarLista" class="btnGuardarListaOculto">Guardar lista</button>
+    </div>
+  </div>
+  <div id="contenidoListaVoladuras" class="contenido-lista oculto">
+    <p class="formato-lista">Formato: Mes | Nombre de voladura | Blast ID</p>
+    <textarea id="txtVoladuras" rows="4"></textarea>
+  </div>
+</section>
+
+<section class="controles">
+  <div>
+    <label>Mes / Proyecto</label>
+    <select id="selectMes"></select>
+  </div>
+
+  <div>
+    <label>Voladura</label>
+    <select id="selectBlast"></select>
+  </div>
+
+  <button id="btnCargar">Cargar datos</button>
+</section>
+
+<div class="estado-linea">
+  <p id="estado">Esperando...</p>
+  <div id="estadoSupabase" class="estado-supabase">Verificando conexión...</div>
+</div>
+
+<section class="kpis kpis-ejecutivos">
+  <div class="card kpi-card"><div class="kpi-icono">●</div><span>Total taladros</span><strong id="kpiTotal">0</strong></div>
+  <div class="card kpi-card"><div class="kpi-icono">✓</div><span>Taladros cargados</span><strong id="kpiCargados">0</strong></div>
+  <div class="card kpi-card"><div class="kpi-icono">○</div><span>Por cargar</span><strong id="kpiPendientes">0</strong></div>
+  <div class="card kpi-card"><div class="kpi-icono">◇</div><span>Taladros auxiliares</span><strong id="kpiAyudas">0</strong></div>
+  <div class="card kpi-card"><div class="kpi-icono">kg</div><span>Carga total cargada</span><strong id="kpiCargaTotal">0 kg</strong></div>
+</section>
+
+<main class="dashboard">
+  <section class="grafico-card">
+    <h3 id="tituloGrafico">Estado de carguío</h3>
+
+    <div id="panelRangosCarga" class="panel-rangos oculto">
+      <div class="panel-rangos-header">
+        <h4>Rangos manuales de fecha y hora de carguío</h4>
+        <div class="panel-rangos-acciones">
+          <button id="btnAplicarRangos" type="button">Aplicar rangos</button>
+          <button id="btnLimpiarRangos" type="button" class="btnSecundario">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="fila-rango">
+        <div class="swatch" style="background:#ef4444;"></div>
+        <div class="etiqueta-rango">Rango 1</div>
+        <input type="datetime-local" id="rango1Inicio" class="input-rango-carga">
+        <span class="separador-rango">a</span>
+        <input type="datetime-local" id="rango1Fin" class="input-rango-carga">
+      </div>
+
+      <div class="fila-rango">
+        <div class="swatch" style="background:#3b82f6;"></div>
+        <div class="etiqueta-rango">Rango 2</div>
+        <input type="datetime-local" id="rango2Inicio" class="input-rango-carga">
+        <span class="separador-rango">a</span>
+        <input type="datetime-local" id="rango2Fin" class="input-rango-carga">
+      </div>
+
+      <div class="fila-rango">
+        <div class="swatch" style="background:#22c55e;"></div>
+        <div class="etiqueta-rango">Rango 3</div>
+        <input type="datetime-local" id="rango3Inicio" class="input-rango-carga">
+        <span class="separador-rango">a</span>
+        <input type="datetime-local" id="rango3Fin" class="input-rango-carga">
+      </div>
+
+      <div class="fila-rango">
+        <div class="swatch" style="background:#8b5cf6;"></div>
+        <div class="etiqueta-rango">Rango 4</div>
+        <input type="datetime-local" id="rango4Inicio" class="input-rango-carga">
+        <span class="separador-rango">a</span>
+        <input type="datetime-local" id="rango4Fin" class="input-rango-carga">
+      </div>
+
+      <div class="rango-filtros">
+        <div class="titulo-filtro-rango">Filtro analítico</div>
+        <button type="button" class="btnFiltroRango activo" data-filtro-rango="TODO">Todo</button>
+        <button type="button" class="btnFiltroRango" data-filtro-rango="Rango 1">Rango 1</button>
+        <button type="button" class="btnFiltroRango" data-filtro-rango="Rango 2">Rango 2</button>
+        <button type="button" class="btnFiltroRango" data-filtro-rango="Rango 3">Rango 3</button>
+        <button type="button" class="btnFiltroRango" data-filtro-rango="Rango 4">Rango 4</button>
+        <button type="button" class="btnFiltroRango" data-filtro-rango="FUERA DE RANGO">Fuera de rango</button>
+      </div>
+
+      <div id="estadoFiltroRango" class="estado-filtro-rango">
+        Filtro activo: Todo el proyecto
+      </div>
+
+      <div class="nota-rangos">
+        <strong>Nota:</strong> el gráfico mantiene los taladros no cargados en gris como referencia.
+        Al seleccionar un rango, los KPIs, resúmenes y tabla detalle se recalculan solo con los taladros cargados dentro de ese rango.
+      </div>
+    </div>
+
+    <div id="grafico2D"></div>
+  </section>
+
+  <div class="botones">
+    <button class="btnVista activo" data-vista="estado">Estado de carguío</button>
+    <button class="btnVista" data-vista="primas">Primas</button>
+    <button class="btnVista" data-vista="mezcla">Tipo de mezcla</button>
+    <button class="btnVista" data-vista="ayudas">Ayudas</button>
+    <button class="btnVista" data-vista="rangos">Rangos de carguío</button>
+    <button id="btnToggleConsumo" class="btnVista btnConsumo" type="button">Consumo de insumos</button>
+  </div>
+
+  <aside class="resumenes">
+    <div class="tabla-resumen">
+      <h3>Resumen de mezcla</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre Enaex</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyResumenBulk"></tbody>
+      </table>
+    </div>
+
+    <div class="tabla-resumen resumen-label">
+      <h3>Resumen por label</h3>
+      <div class="scroll-tabla">
+        <table>
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Carga</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyResumenLabel"></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<section id="panelConsumoInsumos" class="panel consumo-insumos oculto">
+  <div class="consumo-header">
+    <div>
+      <h2>Consumo de insumos</h2>
+      <p>Calcula el consumo estimado según el rango seleccionado en los controles de carguío y la composición de mezcla configurada.</p>
+    </div>
+    <div class="consumo-acciones">
+      <label class="switch-consumo">
+        <input id="chkAceiteResidual" type="checkbox">
+        <span>Usó aceite residual</span>
+      </label>
+      <button id="btnActualizarConsumo" type="button" class="btnSecundario">Actualizar cálculo</button>
+      <button id="btnCerrarConsumo" type="button" class="btnSecundario">Ocultar</button>
+    </div>
+  </div>
+
+  <div id="resumenConsumoTexto" class="resumen-consumo-texto">
+    Carga datos para calcular el consumo de insumos.
+  </div>
+
+  <div class="consumo-grid">
+    <div class="consumo-card">
+      <h3>Consumo por mezcla</h3>
+      <div class="tabla-consumo-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Mezcla</th>
+              <th>Taladros</th>
+              <th>Kg cargados</th>
+              <th>Emulsión</th>
+              <th>Nitrato</th>
+              <th>Diesel</th>
+              <th>Aceite residual</th>
+              <th>Gasificante</th>
+              <th>Kallpex</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyConsumoMezcla"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="consumo-card consumo-total-card">
+      <h3>Resumen total por insumo</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Insumo</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyConsumoTotal"></tbody>
+      </table>
+      <div class="nota-consumo">
+        El gasificante se calcula por cantidad de taladros cargados. Los demás insumos se calculan por kg de mezcla cargada.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tabla-detalle">
+  <div class="tabla-detalle-header">
+    <h2>Detalle de taladros</h2>
+    <button id="btnLimpiarFiltrosTabla" type="button" class="btnSecundario">Limpiar filtros</button>
+  </div>
+  <table>
+    <thead id="encabezadoTabla"></thead>
+    <tbody id="cuerpoTabla"></tbody>
+  </table>
+</section>
+
+<section class="panel historial-admin historial-admin-cerrado">
+  <div class="historial-header">
+    <div>
+      <h2>Edición de historial guardado</h2>
+      <p>Panel opcional para correcciones manuales excepcionales.</p>
+    </div>
+    <div class="historial-acciones">
+      <button id="btnToggleHistorialAdmin" type="button" class="btnSecundario">Mostrar edición</button>
+      <button id="btnRecargarHistorial" type="button" class="btnSecundario oculto">Recargar historial</button>
+    </div>
+  </div>
+
+  <div id="panelHistorialAdminContenido" class="oculto">
+    <div id="estadoHistorialAdmin" class="estado-historial-admin">
+      Carga una voladura para ver el historial editable.
+    </div>
+
+    <div class="tabla-historial-admin">
+      <table>
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Taladro</th>
+            <th>Último Ch</th>
+            <th>Fecha detectada</th>
+            <th>Método</th>
+            <th>Comentario</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyHistorialAdmin"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
