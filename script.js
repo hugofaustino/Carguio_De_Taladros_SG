@@ -1,3 +1,20 @@
+/* =========================================================
+   CONFIGURACIÓN SUPABASE
+   =========================================================
+   1) Crea la tabla usando el SQL que te dejo en la respuesta.
+   2) Copia tu Project URL y tu publishable/anon key de Supabase.
+   3) Pégalos aquí.
+
+   IMPORTANTE:
+   - La publishable/anon key puede estar en frontend si tus políticas RLS están bien definidas.
+   - Si dejas políticas públicas de edición, cualquier persona con el link podría modificar el historial.
+*/
+const SUPABASE_URL = "https://zrnplnanihhfogerrtyx.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_xiNKNP6LpJkfbcoa9IG33w_yMbWRrNF";
+const SUPABASE_TABLE = "historial_carga_opit";
+
+let supabaseClient = null;
+
 const panelRangosCarga = document.getElementById("panelRangosCarga");
 const btnAplicarRangos = document.getElementById("btnAplicarRangos");
 const btnLimpiarRangos = document.getElementById("btnLimpiarRangos");
@@ -35,6 +52,11 @@ const tbodyResumenBulk = document.getElementById("tbodyResumenBulk");
 const tbodyResumenLabel = document.getElementById("tbodyResumenLabel");
 const tituloGrafico = document.getElementById("tituloGrafico");
 
+const estadoSupabase = document.getElementById("estadoSupabase");
+const btnRecargarHistorial = document.getElementById("btnRecargarHistorial");
+const tbodyHistorialAdmin = document.getElementById("tbodyHistorialAdmin");
+const estadoHistorialAdmin = document.getElementById("estadoHistorialAdmin");
+
 const user = "willian.varas@enaex.com";
 const HISTORIAL_CARGA_KEY = "historialCargaTaladrosOPit";
 
@@ -48,6 +70,8 @@ let dataActual = [];
 let vistaActual = "estado";
 let labelSeleccionado = null;
 let filtroRangoActivo = "TODO";
+let historialActualSupabase = [];
+let usandoSupabase = false;
 
 let rangoBaseGrafico = null;
 let ultimoRangoGrafico = null;
@@ -100,6 +124,10 @@ btnGuardarLista.addEventListener("click", guardarLista);
 btnCargar.addEventListener("click", cargarDatos);
 selectMes.addEventListener("change", cargarVoladurasDelMes);
 
+btnRecargarHistorial?.addEventListener("click", async () => {
+  await cargarHistorialAdmin();
+});
+
 botonesVista.forEach(btn => {
   btn.addEventListener("click", () => {
     vistaActual = btn.dataset.vista;
@@ -126,6 +154,8 @@ botonesVista.forEach(btn => {
 iniciarApp();
 
 function iniciarApp() {
+  inicializarSupabase();
+
   const listaGuardada = localStorage.getItem("voladurasOPit");
 
   if (listaGuardada && listaGuardada.trim() !== "") {
@@ -140,6 +170,31 @@ function iniciarApp() {
   limpiarKpis();
   actualizarVisibilidadPanelRangos();
   actualizarBotonesFiltroRango();
+  renderHistorialAdmin([]);
+}
+
+function inicializarSupabase() {
+  const urlValida = SUPABASE_URL && !SUPABASE_URL.includes("PEGA_AQUI") && SUPABASE_URL.startsWith("https://");
+  const keyValida = SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes("PEGA_AQUI");
+
+  if (!urlValida || !keyValida || !window.supabase) {
+    usandoSupabase = false;
+    supabaseClient = null;
+    if (estadoSupabase) {
+      estadoSupabase.textContent = "Supabase no configurado · usando respaldo local";
+      estadoSupabase.className = "estado-supabase advertencia";
+    }
+    return;
+  }
+
+  const { createClient } = window.supabase;
+  supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  usandoSupabase = true;
+
+  if (estadoSupabase) {
+    estadoSupabase.textContent = "Supabase configurado · historial compartido activo";
+    estadoSupabase.className = "estado-supabase ok";
+  }
 }
 
 function guardarLista() {
@@ -150,6 +205,7 @@ function guardarLista() {
   limpiarKpis();
   limpiarGrafico();
   limpiarResumenes();
+  renderHistorialAdmin([]);
   estado.textContent = "Lista guardada correctamente.";
 }
 
@@ -201,6 +257,8 @@ function cargarVoladurasDelMes() {
     option.textContent = voladura.nombre;
     selectBlast.appendChild(option);
   });
+
+  renderHistorialAdmin([]);
 }
 
 async function cargarDatos() {
@@ -209,6 +267,7 @@ async function cargarDatos() {
   limpiarKpis();
   limpiarGrafico();
   limpiarResumenes();
+  renderHistorialAdmin([]);
 
   labelSeleccionado = null;
   rangoBaseGrafico = null;
@@ -238,12 +297,19 @@ async function cargarDatos() {
     }
 
     dataActual = data.map(fila => transformarFila(fila));
-    dataActual = aplicarHistorialCarga(dataActual, blastId);
+
+    if (usandoSupabase) {
+      dataActual = await aplicarHistorialCargaSupabase(dataActual, blastId);
+      await cargarHistorialAdmin();
+    } else {
+      dataActual = aplicarHistorialCargaLocal(dataActual, blastId);
+    }
 
     actualizarDashboardAnalitico();
     construirGrafico2D(dataActual, vistaActual);
 
-    estado.textContent = `Datos cargados: ${dataActual.length} taladros`;
+    const origenHistorial = usandoSupabase ? "Supabase" : "localStorage temporal";
+    estado.textContent = `Datos cargados: ${dataActual.length} taladros · Historial: ${origenHistorial}`;
 
   } catch (error) {
     console.error("ERROR:", error);
@@ -970,7 +1036,10 @@ function limpiarResumenes() {
   tbodyResumenLabel.innerHTML = "";
 }
 
-function cargarHistorialCarga() {
+/* =========================================================
+   HISTORIAL LOCAL: respaldo temporal si Supabase no está configurado
+   ========================================================= */
+function cargarHistorialCargaLocal() {
   try {
     return JSON.parse(localStorage.getItem(HISTORIAL_CARGA_KEY) || "{}");
   } catch {
@@ -978,28 +1047,12 @@ function cargarHistorialCarga() {
   }
 }
 
-function guardarHistorialCarga(historial) {
+function guardarHistorialCargaLocal(historial) {
   localStorage.setItem(HISTORIAL_CARGA_KEY, JSON.stringify(historial));
 }
 
-function crearClaveTaladro(fila, blastId) {
-  const idBase = fila.ID || fila.Label || fila.Taladro || "SIN_ID";
-  return `${blastId}_${idBase}`;
-}
-
-function formatearFechaHora(fecha) {
-  return fecha.toLocaleString("es-PE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-}
-
-function aplicarHistorialCarga(data, blastId) {
-  const historial = cargarHistorialCarga();
+function aplicarHistorialCargaLocal(data, blastId) {
+  const historial = cargarHistorialCargaLocal();
   const ahora = new Date();
   const ahoraISO = ahora.toISOString();
   const ahoraTexto = formatearFechaHora(ahora);
@@ -1026,7 +1079,6 @@ function aplicarHistorialCarga(data, blastId) {
       };
     } else {
       const registro = historial[clave];
-
       const chAnterior = Number(registro.ultimoCh);
 
       if (chAnterior !== 1 && chActual === 1 && !registro.fechaCargaDetectadaISO) {
@@ -1060,9 +1112,313 @@ function aplicarHistorialCarga(data, blastId) {
     };
   });
 
-  guardarHistorialCarga(historial);
+  guardarHistorialCargaLocal(historial);
 
   return dataConHistorial;
+}
+
+/* =========================================================
+   HISTORIAL SUPABASE: fuente central compartida
+   ========================================================= */
+function crearClaveTaladro(fila, blastId) {
+  const idBase = fila.ID || fila.Label || fila.Taladro || "SIN_ID";
+  return `${blastId}_${idBase}`;
+}
+
+function formatearFechaHora(fecha) {
+  return fecha.toLocaleString("es-PE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function formatearFechaHoraDesdeISO(iso) {
+  if (!iso) return "";
+  const fecha = new Date(iso);
+  if (!(fecha instanceof Date) || isNaN(fecha)) return "";
+  return formatearFechaHora(fecha);
+}
+
+function convertirISOAInputDatetimeLocal(iso) {
+  if (!iso) return "";
+  const fecha = new Date(iso);
+  if (!(fecha instanceof Date) || isNaN(fecha)) return "";
+
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dd = String(fecha.getDate()).padStart(2, "0");
+  const hh = String(fecha.getHours()).padStart(2, "0");
+  const mi = String(fecha.getMinutes()).padStart(2, "0");
+
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+function convertirInputDatetimeLocalAISO(valor) {
+  if (!valor) return null;
+  const fecha = new Date(valor);
+  if (!(fecha instanceof Date) || isNaN(fecha)) return null;
+  return fecha.toISOString();
+}
+
+async function obtenerHistorialSupabase(blastId) {
+  if (!supabaseClient) return [];
+
+  const { data, error } = await supabaseClient
+    .from(SUPABASE_TABLE)
+    .select("*")
+    .eq("blast_id", String(blastId));
+
+  if (error) throw new Error("Supabase select: " + error.message);
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function upsertHistorialSupabase(registros) {
+  if (!supabaseClient || registros.length === 0) return;
+
+  const { error } = await supabaseClient
+    .from(SUPABASE_TABLE)
+    .upsert(registros, { onConflict: "clave" });
+
+  if (error) throw new Error("Supabase upsert: " + error.message);
+}
+
+function crearRegistroSupabaseDesdeFila(fila, blastId, ahoraISO, ahoraTexto) {
+  const chActual = Number(fila.Ch);
+  const estaCargado = chActual === 1;
+  const fechaCargaISO = estaCargado ? ahoraISO : null;
+  const fechaCargaTexto = estaCargado ? ahoraTexto : "";
+
+  return {
+    clave: crearClaveTaladro(fila, blastId),
+    blast_id: String(blastId),
+    taladro_id: fila.ID ? String(fila.ID) : null,
+    label: fila.Label || "",
+    taladro: fila.Taladro ? String(fila.Taladro) : "",
+    ultimo_ch: chActual,
+    fecha_inicio_seguimiento: ahoraISO,
+    fecha_inicio_seguimiento_texto: ahoraTexto,
+    fecha_carga_detectada: fechaCargaISO,
+    fecha_carga_detectada_texto: fechaCargaTexto,
+    metodo_fecha_carga: estaCargado ? "Ya cargado al iniciar seguimiento" : "Pendiente",
+    ultima_revision: ahoraISO,
+    ultima_revision_texto: ahoraTexto,
+    editado_manualmente: false,
+    comentario_edicion: "",
+    updated_at: ahoraISO
+  };
+}
+
+function actualizarRegistroSupabaseDesdeFila(registro, fila, ahoraISO, ahoraTexto) {
+  const chAnterior = Number(registro.ultimo_ch);
+  const chActual = Number(fila.Ch);
+  const estaCargado = chActual === 1;
+
+  const salida = {
+    ...registro,
+    taladro_id: fila.ID ? String(fila.ID) : registro.taladro_id,
+    label: fila.Label || registro.label || "",
+    taladro: fila.Taladro ? String(fila.Taladro) : registro.taladro || "",
+    ultimo_ch: chActual,
+    ultima_revision: ahoraISO,
+    ultima_revision_texto: ahoraTexto,
+    updated_at: ahoraISO
+  };
+
+  if (chAnterior !== 1 && estaCargado && !registro.fecha_carga_detectada) {
+    salida.fecha_carga_detectada = ahoraISO;
+    salida.fecha_carga_detectada_texto = ahoraTexto;
+    salida.metodo_fecha_carga = "Cambio detectado de Ch=0 a Ch=1";
+  }
+
+  if (!estaCargado && !salida.metodo_fecha_carga) {
+    salida.metodo_fecha_carga = "Pendiente";
+  }
+
+  return salida;
+}
+
+async function aplicarHistorialCargaSupabase(data, blastId) {
+  const historial = await obtenerHistorialSupabase(blastId);
+  const historialPorClave = new Map(historial.map(registro => [registro.clave, registro]));
+
+  const ahora = new Date();
+  const ahoraISO = ahora.toISOString();
+  const ahoraTexto = formatearFechaHora(ahora);
+
+  const registrosParaGuardar = [];
+  const registrosFinalesPorClave = new Map();
+
+  data.forEach(fila => {
+    const clave = crearClaveTaladro(fila, blastId);
+    const registroExistente = historialPorClave.get(clave);
+
+    const registroFinal = registroExistente
+      ? actualizarRegistroSupabaseDesdeFila(registroExistente, fila, ahoraISO, ahoraTexto)
+      : crearRegistroSupabaseDesdeFila(fila, blastId, ahoraISO, ahoraTexto);
+
+    registrosParaGuardar.push(registroFinal);
+    registrosFinalesPorClave.set(clave, registroFinal);
+  });
+
+  await upsertHistorialSupabase(registrosParaGuardar);
+
+  historialActualSupabase = Array.from(registrosFinalesPorClave.values());
+
+  return data.map(fila => {
+    const clave = crearClaveTaladro(fila, blastId);
+    const registro = registrosFinalesPorClave.get(clave);
+    const estaCargado = Number(fila.Ch) === 1;
+
+    const fechaISO = registro?.fecha_carga_detectada || "";
+    const fechaTexto = registro?.fecha_carga_detectada_texto || formatearFechaHoraDesdeISO(fechaISO);
+
+    return {
+      ...fila,
+      Fecha_Cargado_Detectada: estaCargado ? fechaTexto : "",
+      _Fecha_Cargado_Detectada_ISO: estaCargado ? fechaISO : "",
+      Metodo_Fecha_Carga: estaCargado ? (registro?.metodo_fecha_carga || "") : "Pendiente",
+      Ultima_Revision_Dashboard: ahoraTexto,
+      Editado_Manualmente: registro?.editado_manualmente ? "Sí" : "No",
+      Comentario_Edicion: registro?.comentario_edicion || ""
+    };
+  });
+}
+
+async function cargarHistorialAdmin() {
+  const blastId = selectBlast.value;
+
+  if (!blastId) {
+    renderHistorialAdmin([]);
+    return;
+  }
+
+  if (!usandoSupabase || !supabaseClient) {
+    if (estadoHistorialAdmin) {
+      estadoHistorialAdmin.textContent = "Supabase no está configurado. No hay historial central para editar.";
+    }
+    renderHistorialAdmin([]);
+    return;
+  }
+
+  try {
+    const historial = await obtenerHistorialSupabase(blastId);
+    historialActualSupabase = historial;
+    renderHistorialAdmin(historial);
+  } catch (error) {
+    console.error(error);
+    if (estadoHistorialAdmin) {
+      estadoHistorialAdmin.textContent = "Error al cargar historial: " + error.message;
+    }
+  }
+}
+
+function renderHistorialAdmin(historial) {
+  if (!tbodyHistorialAdmin) return;
+
+  tbodyHistorialAdmin.innerHTML = "";
+
+  if (!historial || historial.length === 0) {
+    if (estadoHistorialAdmin) {
+      estadoHistorialAdmin.textContent = usandoSupabase
+        ? "Sin historial para mostrar. Primero carga datos de una voladura."
+        : "Supabase no configurado. Se usará localStorage temporal.";
+    }
+    return;
+  }
+
+  if (estadoHistorialAdmin) {
+    estadoHistorialAdmin.textContent = `Historial cargado: ${historial.length} registros. Puedes corregir la fecha y guardar por fila.`;
+  }
+
+  [...historial]
+    .sort((a, b) => String(a.label || "").localeCompare(String(b.label || ""), "es", { numeric: true }))
+    .forEach(registro => {
+      const tr = document.createElement("tr");
+      tr.dataset.clave = registro.clave;
+      tr.dataset.label = registro.label || "";
+
+      const fechaInput = convertirISOAInputDatetimeLocal(registro.fecha_carga_detectada);
+      const metodo = registro.metodo_fecha_carga || "";
+      const comentario = registro.comentario_edicion || "";
+
+      tr.innerHTML = `
+        <td>${registro.label || ""}</td>
+        <td>${registro.taladro || ""}</td>
+        <td>${registro.ultimo_ch ?? ""}</td>
+        <td><input type="datetime-local" class="inputFechaHistorial" value="${fechaInput}"></td>
+        <td><input type="text" class="inputMetodoHistorial" value="${escapeHtmlAttr(metodo)}"></td>
+        <td><input type="text" class="inputComentarioHistorial" value="${escapeHtmlAttr(comentario)}" placeholder="Opcional"></td>
+        <td>
+          <button type="button" class="btnGuardarHistorialFila">Guardar</button>
+          <button type="button" class="btnLimpiarFechaFila">Limpiar fecha</button>
+        </td>
+      `;
+
+      tr.querySelector(".btnGuardarHistorialFila")?.addEventListener("click", async () => {
+        await guardarEdicionHistorialFila(registro.clave, tr, false);
+      });
+
+      tr.querySelector(".btnLimpiarFechaFila")?.addEventListener("click", async () => {
+        tr.querySelector(".inputFechaHistorial").value = "";
+        await guardarEdicionHistorialFila(registro.clave, tr, true);
+      });
+
+      tbodyHistorialAdmin.appendChild(tr);
+    });
+}
+
+function escapeHtmlAttr(valor) {
+  return String(valor || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+async function guardarEdicionHistorialFila(clave, filaHtml, limpiarFecha) {
+  if (!supabaseClient) return;
+
+  const inputFecha = filaHtml.querySelector(".inputFechaHistorial");
+  const inputMetodo = filaHtml.querySelector(".inputMetodoHistorial");
+  const inputComentario = filaHtml.querySelector(".inputComentarioHistorial");
+
+  const fechaISO = limpiarFecha ? null : convertirInputDatetimeLocalAISO(inputFecha?.value || "");
+  const fechaTexto = fechaISO ? formatearFechaHoraDesdeISO(fechaISO) : "";
+  const ahoraISO = new Date().toISOString();
+
+  const payload = {
+    fecha_carga_detectada: fechaISO,
+    fecha_carga_detectada_texto: fechaTexto,
+    metodo_fecha_carga: inputMetodo?.value?.trim() || (fechaISO ? "Editado manualmente" : "Pendiente"),
+    comentario_edicion: inputComentario?.value?.trim() || "",
+    editado_manualmente: true,
+    updated_at: ahoraISO
+  };
+
+  try {
+    const { error } = await supabaseClient
+      .from(SUPABASE_TABLE)
+      .update(payload)
+      .eq("clave", clave);
+
+    if (error) throw new Error(error.message);
+
+    if (estadoHistorialAdmin) {
+      estadoHistorialAdmin.textContent = "Edición guardada correctamente. Actualizando dashboard...";
+    }
+
+    await cargarDatos();
+  } catch (error) {
+    console.error(error);
+    if (estadoHistorialAdmin) {
+      estadoHistorialAdmin.textContent = "Error al guardar edición: " + error.message;
+    }
+  }
 }
 
 function actualizarVisibilidadPanelRangos() {
