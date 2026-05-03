@@ -68,25 +68,39 @@ body {
 .lista,
 .grafico-card,
 .tabla-resumen,
-.tabla-detalle {
+.tabla-detalle,
+.panel-supabase,
+.historial-admin {
   background: var(--card);
   border-radius: 18px;
   border: 1px solid var(--borde);
   box-shadow: var(--shadow);
 }
 
-.lista {
+.lista,
+.panel-supabase,
+.historial-admin {
   padding: 18px;
 }
 
 .lista h2,
 .grafico-card h3,
-.tabla-resumen h3 {
+.tabla-resumen h3,
+.panel-supabase h2,
+.historial-admin h2 {
   margin-top: 0;
   color: var(--rojo);
   text-transform: uppercase;
   font-size: 14px;
   letter-spacing: 0.6px;
+}
+
+.lista p,
+.panel-supabase p,
+.historial-admin p {
+  margin: 4px 0 0;
+  color: var(--gris-text);
+  font-size: 13px;
 }
 
 textarea {
@@ -245,7 +259,8 @@ button:hover {
 }
 
 .tabla-resumen table,
-.tabla-detalle table {
+.tabla-detalle table,
+.tabla-historial-admin table {
   width: 100%;
   border-collapse: collapse;
 }
@@ -253,14 +268,17 @@ button:hover {
 .tabla-resumen th,
 .tabla-resumen td,
 .tabla-detalle th,
-.tabla-detalle td {
+.tabla-detalle td,
+.tabla-historial-admin th,
+.tabla-historial-admin td {
   border-bottom: 1px solid var(--borde);
   padding: 8px;
   font-size: 13px;
 }
 
 .tabla-resumen th,
-.tabla-detalle th {
+.tabla-detalle th,
+.tabla-historial-admin th {
   background: #f6f8fb;
   text-align: left;
   position: sticky;
@@ -277,7 +295,8 @@ button:hover {
 }
 
 .tabla-resumen tbody tr:hover,
-.tabla-detalle tbody tr:hover {
+.tabla-detalle tbody tr:hover,
+.tabla-historial-admin tbody tr:hover {
   background: #fff1f2;
 }
 
@@ -372,7 +391,8 @@ button:hover {
   font-weight: 800;
 }
 
-.panel-rangos-acciones .btnSecundario {
+.panel-rangos-acciones .btnSecundario,
+.btnSecundario {
   background: white;
   color: #10233f;
   border: 1px solid #cfd6e0;
@@ -466,6 +486,91 @@ button:hover {
   line-height: 1.4;
 }
 
+.supabase-header,
+.historial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.estado-supabase {
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #eef2f7;
+  color: #10233f;
+  white-space: nowrap;
+}
+
+.estado-supabase.ok {
+  background: #e7f7ec;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.estado-supabase.advertencia {
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+
+.nota-supabase,
+.estado-historial-admin {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  color: var(--gris-text);
+  font-size: 13px;
+}
+
+.tabla-historial-admin {
+  margin-top: 12px;
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+
+.tabla-historial-admin table {
+  min-width: 1150px;
+}
+
+.inputFechaHistorial,
+.inputMetodoHistorial,
+.inputComentarioHistorial {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  background: white;
+  font-size: 12px;
+}
+
+.btnGuardarHistorialFila,
+.btnLimpiarFechaFila {
+  padding: 7px 9px;
+  font-size: 12px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.btnGuardarHistorialFila {
+  background: var(--rojo);
+  color: white;
+  border-color: var(--rojo);
+}
+
+.btnLimpiarFechaFila {
+  background: white;
+  color: var(--azul);
+  border-color: #cfd6e0;
+}
+
 @media (max-width: 1250px) {
   .dashboard {
     grid-template-columns: 1fr;
@@ -557,5 +662,9 @@ button:hover {
 
   .scroll-tabla {
     max-height: 240px;
+  }
+
+  .estado-supabase {
+    white-space: normal;
   }
 }
